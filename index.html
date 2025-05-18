@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>statuspage - sharpennd</title>
+  <style>
+    body {
+      background-color: #121212;
+      font-family: "Segoe UI", sans-serif;
+      color: #e0e0e0;
+      margin: 0;
+      padding: 0;
+    }
+    header {
+      background-color: #1e1e1e;
+      padding: 1rem;
+      text-align: center;
+      font-size: 1.5rem;
+      font-weight: bold;
+    }
+    .container {
+      max-width: 800px;
+      margin: 2rem auto;
+      padding: 1rem;
+    }
+    .service {
+      background-color: #1f1f1f;
+      margin-bottom: 1rem;
+      padding: 1rem;
+      border-radius: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    }
+    .service-name {
+      font-size: 1.2rem;
+    }
+    .status {
+      font-weight: bold;
+      padding: 0.3rem 0.7rem;
+      border-radius: 5px;
+    }
+    .online {
+      background-color: #235d2a;
+      color: #d0f0d0;
+    }
+    .offline {
+      background-color: #5a1e1e;
+      color: #f0d0d0;
+    }
+    .degraded {
+      background-color: #a85c00;
+      color: #fff0d0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container" id="statusContainer">
+    <!-- services get inserted here -->
+  </div>
+  <script>
+    const services = [
+      {
+        name: "Website",
+        type: "domain",
+        host: "sharpennd.xyz"
+      },
+      {
+        name: "Server",
+        type: "port",
+        port: 25565
+      },
+      {
+        name: "Panel",
+        type: "port",
+        port: 8443
+      },
+    ];
+    async function checkDomain(host) {
+      try {
+        const response = await fetch("https://api.mcsrvstat.us/2/" + host);
+        const data = await response.json();
+        return data.online ? "online" : "offline";
+      } catch (e) {
+        return "offline";
+      }
+    }
+    async function checkPort(host, port) {
+      try {
+        const response = await fetch(`https://api.mcsrvstat.us/2/${host}`);
+        const data = await response.json();
+        if (data.online && data.port === port) {
+          return "online";
+        } else if (!data.online) {
+          return "offline";
+        } else {
+          return "degraded";
+        }
+      } catch (e) {
+        return "offline";
+      }
+    }
+    async function loadStatuses() {
+      const container = document.getElementById("statusContainer");
+      for (const service of services) {
+        let status = "offline";
+
+        if (service.type === "domain") {
+          status = await checkDomain(service.host);
+        } else if (service.type === "port") {
+          status = await checkPort(service.host, service.port);
+        }
+
+        const div = document.createElement("div");
+        div.className = "service";
+
+        const name = document.createElement("span");
+        name.className = "service-name";
+        name.textContent = service.name;
+
+        const statusEl = document.createElement("span");
+        statusEl.className = `status ${status}`;
+        statusEl.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+
+        div.appendChild(name);
+        div.appendChild(statusEl);
+        container.appendChild(div);
+      }
+    }
+    loadStatuses();
+  </script>
+</body>
+</html>
