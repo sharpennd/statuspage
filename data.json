@@ -2,10 +2,10 @@
   "incidents": [
     {
       "title": "Server Crash",
-      "start": "2025-05-5T10:45Z",
-      "end": "2025-05-6T11:30Z",
+      "start": "2025-05-05T10:45Z",
+      "end": "2025-05-06T11:30Z",
       "description": "Server experienced crashes due to a mod giving invalid data. The mod was removed as a result."
-    },
+    }
   ],
   "maintenance": [
     {
@@ -13,6 +13,6 @@
       "start": "2025-05-23T02:00Z",
       "end": "2025-05-23T02:15Z",
       "description": "We will be upgrading the server's memory for better performance."
-    },
+    }
   ]
 }
