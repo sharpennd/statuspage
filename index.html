@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>sharpennd - statuspage</title>
   <style>
     body {
@@ -66,11 +66,6 @@
       align-items: center;
     }
 
-    .nav-title {
-      font-size: 1.2rem;
-      font-weight: bold;
-    }
-
     .nav-menu {
       display: none;
       flex-direction: column;
@@ -115,35 +110,43 @@
   </nav>
 
   <div class="container">
-    <h1>Status Page</h1>
-
     <div class="status-section">
       <h2>Incidents</h2>
-      <div id="incidentContainer"></div>
+      <div id="incidentContainer">Loading incidents...</div>
     </div>
 
     <div class="status-section">
       <h2>Maintenance</h2>
-      <div id="maintenanceContainer"></div>
+      <div id="maintenanceContainer">Loading maintenance...</div>
     </div>
   </div>
 
   <script>
     async function loadData() {
-      const response = await fetch('data.json');
-      const json = await response.json();
-      return json;
+      try {
+        const response = await fetch('data.json');
+        if (!response.ok) throw new Error('Network response was not ok');
+        const json = await response.json();
+        return json;
+      } catch (error) {
+        console.error("Failed to load or parse data.json:", error);
+        return { incidents: [], maintenance: [] };
+      }
     }
 
     async function initialize() {
       const data = await loadData();
-      loadIncidents(data.incidents);
-      loadMaintenance(data.maintenance);
+      loadIncidents(data.incidents || []);
+      loadMaintenance(data.maintenance || []);
     }
 
     function loadIncidents(incidents) {
       const container = document.getElementById("incidentContainer");
       container.innerHTML = "";
+      if (!incidents.length) {
+        container.innerHTML = "<p>No incidents reported.</p>";
+        return;
+      }
       for (const incident of incidents) {
         const div = document.createElement("div");
         div.className = "incident";
@@ -159,6 +162,10 @@
     function loadMaintenance(maintenance) {
       const container = document.getElementById("maintenanceContainer");
       container.innerHTML = "";
+      if (!maintenance.length) {
+        container.innerHTML = "<p>No upcoming maintenance.</p>";
+        return;
+      }
       for (const item of maintenance) {
         const div = document.createElement("div");
         div.className = "maintenance";
