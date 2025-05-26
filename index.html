@@ -78,58 +78,9 @@
     .entry-description {
       font-size: 1rem;
     }
-
-    nav {
-      background-color: #1e1e1e;
-      padding: 1rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .nav-menu {
-      display: none;
-      flex-direction: column;
-    }
-
-    .nav-menu a {
-      color: #e0e0e0;
-      text-decoration: none;
-      padding: 0.5rem 0;
-    }
-
-    .hamburger {
-      display: block;
-      cursor: pointer;
-      font-size: 1.5rem;
-    }
-
-    .nav-menu.active {
-      display: flex;
-    }
-
-    @media (min-width: 600px) {
-      .nav-menu {
-        display: flex !important;
-        flex-direction: row;
-        gap: 1rem;
-      }
-      .hamburger {
-        display: none;
-      }
-    }
   </style>
 </head>
 <body>
-  <nav>
-    <div class="hamburger" onclick="toggleMenu()">☰</div>
-    <div class="nav-menu" id="navMenu">
-      <a href="#">Home</a>
-      <a href="#incidentContainer">Incidents</a>
-      <a href="#maintenanceContainer">Maintenance</a>
-    </div>
-  </nav>
-
   <div class="container">
     <div class="status-section">
       <h2>Service Status</h2>
