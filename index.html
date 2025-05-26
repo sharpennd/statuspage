@@ -28,6 +28,27 @@
       margin: 2rem 0;
     }
 
+    .service {
+      background-color: #1f1f1f;
+      padding: 1rem;
+      border-radius: 10px;
+      margin-bottom: 1rem;
+    }
+
+    .service h3 {
+      margin: 0;
+      font-size: 1.2rem;
+    }
+
+    .uptime {
+      margin-top: 0.5rem;
+      font-size: 0.95rem;
+    }
+
+    .uptime .green { color: darkgreen; }
+    .uptime .orange { color: orange; }
+    .uptime .red { color: darkred; }
+
     .incident, .maintenance {
       background-color: #1f1f1f;
       padding: 1rem;
@@ -111,6 +132,18 @@
 
   <div class="container">
     <div class="status-section">
+      <h2>Service Status</h2>
+      <div class="service">
+        <h3>Minecraft Server</h3>
+        <div class="uptime" id="mcStatus">Checking...</div>
+      </div>
+      <div class="service">
+        <h3>Website</h3>
+        <div class="uptime" id="webStatus">Checking...</div>
+      </div>
+    </div>
+
+    <div class="status-section">
       <h2>Incidents</h2>
       <div id="incidentContainer">Loading incidents...</div>
     </div>
@@ -134,10 +167,27 @@
       }
     }
 
+    async function checkServiceStatus() {
+      const services = [
+        { id: 'mcStatus', url: 'https://mc.sharpennd.xyz', name: 'Minecraft Server' },
+        { id: 'webStatus', url: 'https://sharpennd.xyz', name: 'Website' }
+      ];
+
+      for (const service of services) {
+        try {
+          const res = await fetch(service.url, { method: 'HEAD', mode: 'no-cors' });
+          document.getElementById(service.id).innerHTML = `<span class="green">Online</span>`;
+        } catch {
+          document.getElementById(service.id).innerHTML = `<span class="red">Offline</span>`;
+        }
+      }
+    }
+
     async function initialize() {
       const data = await loadData();
       loadIncidents(data.incidents || []);
       loadMaintenance(data.maintenance || []);
+      checkServiceStatus();
     }
 
     function loadIncidents(incidents) {
