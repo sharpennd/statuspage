@@ -45,9 +45,9 @@
       font-size: 0.95rem;
     }
 
-    .uptime .green { color: darkgreen; }
-    .uptime .orange { color: orange; }
-    .uptime .red { color: darkred; }
+    .green { color: darkgreen; }
+    .orange { color: orange; }
+    .red { color: darkred; }
 
     .incident, .maintenance {
       background-color: #1f1f1f;
@@ -86,11 +86,11 @@
       <h2>Service Status</h2>
       <div class="service">
         <h3>mc.sharpennd.xyz</h3>
-        <div class="uptime" id="mcStatus">Checking...</div>
+        <div class="uptime" id="mcStatus1">Checking...</div>
       </div>
       <div class="service">
         <h3>crememc.sharpennd.xyz</h3>
-        <div class="uptime" id="mcStatus">Checking...</div>
+        <div class="uptime" id="mcStatus2">Checking...</div>
       </div>
       <div class="service">
         <h3>Website</h3>
@@ -108,33 +108,56 @@
       <div id="maintenanceContainer">Loading maintenance...</div>
     </div>
   </div>
-
   <script>
     async function loadData() {
       try {
         const response = await fetch('data.json');
         if (!response.ok) throw new Error('Network response was not ok');
-        const json = await response.json();
-        return json;
+        return await response.json();
       } catch (error) {
         console.error("Failed to load or parse data.json:", error);
         return { incidents: [], maintenance: [] };
       }
     }
 
+    function fetchWithTimeout(resource, options = {}) {
+      const { timeout = 5000 } = options;
+
+      return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => {
+          reject(new Error("Timeout"));
+        }, timeout);
+
+        fetch(resource, { method: 'HEAD', mode: 'no-cors' })
+          .then(response => {
+            clearTimeout(timer);
+            resolve(response);
+          })
+          .catch(err => {
+            clearTimeout(timer);
+            reject(err);
+          });
+      });
+    }
+
     async function checkServiceStatus() {
       const services = [
-        { id: 'mcStatus', url: 'https://mc.sharpennd.xyz', name: 'sharpenndMC' },
-        { id: 'mcStatus', url: 'https://crememc.sharpennd.xyz', name: 'CremeMC' },
+        { id: 'mcStatus1', url: 'https://mc.sharpennd.xyz', name: 'sharpenndMC' },
+        { id: 'mcStatus2', url: 'https://crememc.sharpennd.xyz', name: 'CremeMC' },
         { id: 'webStatus', url: 'https://www.sharpennd.xyz', name: 'Website' }
       ];
 
       for (const service of services) {
+        const el = document.getElementById(service.id);
         try {
-          const res = await fetch(service.url, { method: 'HEAD', mode: 'no-cors' });
-          document.getElementById(service.id).innerHTML = `<span class="green">Online</span>`;
-        } catch {
-          document.getElementById(service.id).innerHTML = `<span class="red">Offline</span>`;
+          await fetchWithTimeout(service.url, { timeout: 5000 });
+          el.innerHTML = `<span class="green">Online</span>`;
+        } catch (err) {
+          if (err.message === "Timeout") {
+            el.innerHTML = `<span class="orange">Timeout / Status Unknown</span>`;
+          } else {
+            el.innerHTML = `<span class="red">Offline</span>`;
+          }
         }
       }
     }
@@ -182,11 +205,6 @@
         `;
         container.appendChild(div);
       }
-    }
-
-    function toggleMenu() {
-      const menu = document.getElementById('navMenu');
-      menu.classList.toggle('active');
     }
 
     initialize();
