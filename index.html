@@ -155,7 +155,7 @@
         const res = await fetch(`https://api.mcsrvstat.us/2/mc.sharpennd.xyz`);
         const data = await res.json();
         if (data.online) {
-          elMC.innerHTML = `<span class="green">Online</span> - ${data.players.online}/${data.players.max} players`;
+          elMC.innerHTML = `<span class="green">Online</span>`;
         } else {
           elMC.innerHTML = `<span class="red">Offline</span>`;
         }
