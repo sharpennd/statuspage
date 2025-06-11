@@ -104,6 +104,7 @@
       <div id="maintenanceContainer">Loading maintenance...</div>
     </div>
   </div>
+
   <script>
     async function loadData() {
       try {
@@ -137,23 +138,29 @@
     }
 
     async function checkServiceStatus() {
-      const services = [
-        { id: 'mcStatus1', url: 'https://mc.sharpennd.xyz', name: 'sharpenndMC' },
-        { id: 'webStatus', url: 'https://www.sharpennd.xyz', name: 'Website' }
-      ];
-
-      for (const service of services) {
-        const el = document.getElementById(service.id);
-        try {
-          await fetchWithTimeout(service.url, { timeout: 5000 });
-          el.innerHTML = `<span class="green">Online</span>`;
-        } catch (err) {
-          if (err.message === "Timeout") {
-            el.innerHTML = `<span class="orange">Timeout / Status Unknown</span>`;
-          } else {
-            el.innerHTML = `<span class="red">Offline</span>`;
-          }
+      const elWeb = document.getElementById('webStatus');
+      try {
+        await fetchWithTimeout('https://www.sharpennd.xyz', { timeout: 5000 });
+        elWeb.innerHTML = `<span class="green">Online</span>`;
+      } catch (err) {
+        if (err.message === "Timeout") {
+          elWeb.innerHTML = `<span class="orange">Timeout / Status Unknown</span>`;
+        } else {
+          elWeb.innerHTML = `<span class="red">Offline</span>`;
         }
+      }
+
+      const elMC = document.getElementById('mcStatus1');
+      try {
+        const res = await fetch(`https://api.mcsrvstat.us/2/mc.sharpennd.xyz`);
+        const data = await res.json();
+        if (data.online) {
+          elMC.innerHTML = `<span class="green">Online</span> - ${data.players.online}/${data.players.max} players`;
+        } else {
+          elMC.innerHTML = `<span class="red">Offline</span>`;
+        }
+      } catch (err) {
+        elMC.innerHTML = `<span class="orange">Status Unknown</span>`;
       }
     }
 
@@ -201,7 +208,6 @@
         container.appendChild(div);
       }
     }
-
     initialize();
   </script>
 </body>
