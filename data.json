@@ -8,7 +8,7 @@
     }
   ],
   "maintenance": [
-    "title": "Server Update to 1.21.5",
+      "title": "Server Update to 1.21.5",
       "start": "11/06/2025 @ 3:30PM",
       "end": "11/06/2025 @ 4:30PM",
       "description": "Server will be updated to 1.21.5, amount of time needed is not definite"
