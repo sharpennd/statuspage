@@ -32,49 +32,17 @@
       background-color: #1f1f1f;
       padding: 1rem;
       border-radius: 10px;
-      margin-bottom: 1.5rem;
+      margin-bottom: 1rem;
     }
 
     .service h3 {
       margin: 0;
       font-size: 1.2rem;
-      display: inline-block;
     }
 
     .uptime {
       margin-top: 0.5rem;
       font-size: 0.95rem;
-    }
-
-    .bar-wrapper {
-      margin-top: 0.5rem;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 2px;
-    }
-
-    .bar {
-      width: 12px;
-      height: 28px;
-      border-radius: 3px;
-      background-color: #555;
-    }
-
-    .bar.online {
-      background-color: darkgreen;
-    }
-
-    .bar.offline {
-      background-color: darkred;
-    }
-
-    .bar.unknown {
-      background-color: orange;
-    }
-
-    .percentage {
-      float: right;
-      font-weight: bold;
     }
 
     .green { color: darkgreen; }
@@ -110,27 +78,37 @@
     .entry-description {
       font-size: 1rem;
     }
+
+    .uptime-bar {
+      display: flex;
+      gap: 2px;
+      margin-top: 0.5rem;
+    }
+
+    .uptime-bar div {
+      flex: 1;
+      height: 8px;
+      border-radius: 2px;
+    }
+
+    .bar-green { background-color: darkgreen; }
+    .bar-red { background-color: darkred; }
+    .bar-orange { background-color: orange; }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>sharpennd Status Page</h1>
-
     <div class="status-section">
       <h2>Service Status</h2>
-
       <div class="service">
         <h3>mc.sharpennd.xyz</h3>
-        <span class="percentage" id="mcUptimePercent">Loading...</span>
         <div class="uptime" id="mcStatus1">Checking...</div>
-        <div class="bar-wrapper" id="mcUptimeBar"></div>
+        <div class="uptime-bar" id="mcUptimeBar"></div>
       </div>
-
       <div class="service">
         <h3>Website</h3>
-        <span class="percentage" id="webUptimePercent">Loading...</span>
         <div class="uptime" id="webStatus">Checking...</div>
-        <div class="bar-wrapper" id="webUptimeBar"></div>
+        <div class="uptime-bar" id="webUptimeBar"></div>
       </div>
     </div>
 
@@ -145,149 +123,6 @@
     </div>
   </div>
 
-  <script>
-    async function loadData() {
-      try {
-        const response = await fetch('data.json');
-        if (!response.ok) throw new Error('Network response was not ok');
-        return await response.json();
-      } catch (error) {
-        console.error("Failed to load or parse data.json:", error);
-        return { incidents: [], maintenance: [] };
-      }
-    }
-
-    function fetchWithTimeout(resource, options = {}) {
-      const { timeout = 5000 } = options;
-
-      return new Promise((resolve, reject) => {
-        const timer = setTimeout(() => reject(new Error("Timeout")), timeout);
-
-        fetch(resource, { method: 'HEAD', mode: 'no-cors' })
-          .then(response => {
-            clearTimeout(timer);
-            resolve(response);
-          })
-          .catch(err => {
-            clearTimeout(timer);
-            reject(err);
-          });
-      });
-    }
-
-    async function checkServiceStatus() {
-      const elWeb = document.getElementById('webStatus');
-      try {
-        await fetchWithTimeout('https://www.sharpennd.xyz', { timeout: 5000 });
-        elWeb.innerHTML = `<span class="green">Online</span>`;
-      } catch (err) {
-        elWeb.innerHTML = err.message === "Timeout"
-          ? `<span class="orange">Timeout / Status Unknown</span>`
-          : `<span class="red">Offline</span>`;
-      }
-
-      const elMC = document.getElementById('mcStatus1');
-      try {
-        const res = await fetch(`https://api.mcsrvstat.us/2/mc.sharpennd.xyz`);
-        const data = await res.json();
-        elMC.innerHTML = data.online
-          ? `<span class="green">Online</span>`
-          : `<span class="red">Offline</span>`;
-      } catch (err) {
-        elMC.innerHTML = `<span class="orange">Status Unknown</span>`;
-      }
-    }
-
-    function generateHistoryFromIncidents(incidents, totalDays = 60) {
-      const history = Array(totalDays).fill("online");
-      const today = new Date();
-      const msPerDay = 86400000;
-
-      for (const incident of incidents) {
-        const start = new Date(incident.start);
-        const end = incident.end ? new Date(incident.end) : new Date();
-
-        for (let i = 0; i < totalDays; i++) {
-          const day = new Date(today - (totalDays - 1 - i) * msPerDay);
-          if (day >= start && day <= end) {
-            history[i] = "offline";
-          }
-        }
-      }
-
-      return history;
-    }
-
-    function renderUptimeBar(barId, labelId, history) {
-      const bar = document.getElementById(barId);
-      const label = document.getElementById(labelId);
-      bar.innerHTML = "";
-
-      const total = history.length;
-      const up = history.filter(x => x === "online").length;
-      const percent = ((up / total) * 100).toFixed(2);
-
-      label.textContent = `${percent}%`;
-
-      for (const status of history) {
-        const div = document.createElement("div");
-        div.className = `bar ${status}`;
-        bar.appendChild(div);
-      }
-    }
-
-    function loadIncidents(incidents) {
-      const container = document.getElementById("incidentContainer");
-      container.innerHTML = "";
-      if (!incidents.length) {
-        container.innerHTML = "<p>No incidents reported.</p>";
-        return;
-      }
-      for (const incident of incidents) {
-        const div = document.createElement("div");
-        div.className = "incident";
-        div.innerHTML = `
-          <div class="entry-title">${incident.title}</div>
-          <div class="entry-time">Start: ${incident.start} | End: ${incident.end}</div>
-          <div class="entry-description">${incident.description}</div>
-        `;
-        container.appendChild(div);
-      }
-    }
-
-    function loadMaintenance(maintenance) {
-      const container = document.getElementById("maintenanceContainer");
-      container.innerHTML = "";
-      if (!maintenance.length) {
-        container.innerHTML = "<p>No upcoming maintenance.</p>";
-        return;
-      }
-      for (const item of maintenance) {
-        const div = document.createElement("div");
-        div.className = "maintenance";
-        div.innerHTML = `
-          <div class="entry-title">${item.title}</div>
-          <div class="entry-time">Start: ${item.start} | End: ${item.end}</div>
-          <div class="entry-description">${item.description}</div>
-        `;
-        container.appendChild(div);
-      }
-    }
-
-    async function initialize() {
-      const data = await loadData();
-      loadIncidents(data.incidents || []);
-      loadMaintenance(data.maintenance || []);
-      checkServiceStatus();
-
-      const mcHistory = data.uptime?.mc || generateHistoryFromIncidents(data.incidents || []);
-      const webHistory = data.uptime?.web || generateHistoryFromIncidents(data.incidents || []);
-
-      renderUptimeBar("mcUptimeBar", "mcUptimePercent", mcHistory);
-      renderUptimeBar("webUptimeBar", "webUptimePercent", webHistory);
-    }
-
-    initialize();
-  </script>
+  <script src="script.js"></script>
 </body>
 </html>
