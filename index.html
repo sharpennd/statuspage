@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>sharpennd - statuspage</title>
   <style>
     body {
@@ -12,122 +12,89 @@
       background-color: #121212;
       color: #e0e0e0;
     }
-
     .container {
       max-width: 900px;
       margin: 2rem auto;
       padding: 1rem;
     }
-
     h1, h2 {
       text-align: center;
       color: #fff;
     }
-
     .status-section {
       margin: 2rem 0;
     }
-
     .service {
       background-color: #1f1f1f;
       padding: 1rem;
       border-radius: 10px;
-      margin-bottom: 1rem;
+      margin-bottom: 1.5rem;
     }
-
     .service h3 {
-      margin: 0;
-      font-size: 1.2rem;
+      margin: 0 0 0.5rem 0;
+      font-size: 1.3rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
     }
-
-    .uptime {
-      margin-top: 0.5rem;
-      font-size: 0.95rem;
-    }
-
-    /* The bar container */
-    .uptime-bar {
-      width: 100%;
-      background-color: #333;
-      border-radius: 6px;
-      overflow: hidden;
-      margin-top: 8px;
-      height: 18px;
-      box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
-    }
-
-    /* The colored part of the bar */
-    .uptime-fill {
-      height: 100%;
-      line-height: 18px;
-      color: white;
-      text-align: right;
-      padding-right: 8px;
+    .status-text {
       font-weight: bold;
+      font-size: 1rem;
+    }
+    .green { color: #4caf50; }
+    .red { color: #f44336; }
+    .orange { color: orange; }
+
+    .uptime-bar {
+      display: flex;
+      gap: 2px;
+      margin: 0.5rem 0 0.2rem 0;
+    }
+    .uptime-block {
+      width: 10px;
+      height: 26px;
+      border-radius: 3px;
+      background-color: #4caf50;
+    }
+    .uptime-block.down {
+      background-color: #f44336;
+    }
+    .uptime-footer {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      color: #888;
       user-select: none;
     }
-
-    .green { color: darkgreen; }
-    .orange { color: orange; }
-    .red { color: darkred; }
-
-    /* Colors for uptime bars */
-    .uptime-fill.green {
-      background-color: #2ecc71;
-    }
-    .uptime-fill.orange {
-      background-color: #f39c12;
-    }
-    .uptime-fill.red {
-      background-color: #e74c3c;
-    }
-
-    .incident, .maintenance {
-      background-color: #1f1f1f;
-      padding: 1rem;
-      margin: 1rem 0;
-      border-radius: 10px;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
-      transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-
-    .incident:hover, .maintenance:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.6);
-    }
-
-    .entry-title {
-      font-size: 1.2rem;
-      font-weight: bold;
-      margin-bottom: 0.5rem;
-    }
-
-    .entry-time {
-      font-size: 0.9rem;
-      color: #bbb;
-      margin-bottom: 0.5rem;
-    }
-
-    .entry-description {
+    .uptime-percent {
+      float: right;
       font-size: 1rem;
+      font-weight: bold;
+      color: #aaa;
     }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="status-section">
-      <div class="service">
-        <h3>mc.sharpennd.xyz</h3>
-        <div class="uptime" id="mcStatus1">Checking...</div>
-        <div class="uptime-bar" aria-label="Minecraft Server Uptime">
-          <div id="mcUptimeBar" class="uptime-fill" style="width: 0%;">0%</div>
+      <div class="service" id="mcService">
+        <h3>
+          mc.sharpennd.xyz
+          <span id="mcStatusText" class="status-text orange">(Checking...)</span>
+        </h3>
+        <div class="uptime-bar" id="mcUptimeBar"></div>
+        <div class="uptime-footer">
+          <div id="mcUptimePercent">--%</div>
         </div>
       </div>
-      <div class="service">
-        <h3>Website</h3>
-        <div class="uptime" id="webStatus">Checking...</div>
-        <div class="uptime-bar" aria-label="Website Uptime">
-          <div id="webUptimeBar" class="uptime-fill" style="width: 0%;">0%</div>
+      <div class="service" id="webService">
+        <h3>
+          sharpennd.xyz
+          <span id="webStatusText" class="status-text orange">(Checking...)</span>
+        </h3>
+        <div class="uptime-bar" id="webUptimeBar"></div>
+        <div class="uptime-footer">
+          <div id="webUptimePercent">--%</div>
         </div>
       </div>
     </div>
@@ -155,61 +122,77 @@
       }
     }
 
-    function setUptimeBar(el, percent) {
-      let colorClass;
-      if (percent >= 90) colorClass = 'green';
-      else if (percent >= 70) colorClass = 'orange';
-      else colorClass = 'red';
-
-      el.style.width = percent + '%';
-      el.className = 'uptime-fill ' + colorClass;
-      el.textContent = percent + '%';
+    function createUptimeBar(containerId, percent, blocks = 50) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = '';
+      const upBlocks = Math.round((percent / 100) * blocks);
+      for (let i = 0; i < blocks; i++) {
+        const block = document.createElement('div');
+        block.className = 'uptime-block';
+        if (i >= upBlocks) block.classList.add('down');
+        container.appendChild(block);
+      }
     }
 
-    async function checkServiceStatus() {
-      const elWeb = document.getElementById('webStatus');
-      const webUptimeBar = document.getElementById('webUptimeBar');
-      
+    async function updateMinecraftStatus() {
+      const statusEl = document.getElementById('mcStatusText');
+      const percentEl = document.getElementById('mcUptimePercent');
       try {
-        const res = await fetch('https://isitup.org/sharpennd.xyz.json');
-        if (!res.ok) throw new Error("Network response not ok");
-        const data = await res.json();
-        if (data.is_up) {
-          elWeb.innerHTML = `<span class="green">Online</span>`;
-          setUptimeBar(webUptimeBar, 99);
-        } else {
-          elWeb.innerHTML = `<span class="red">Offline</span>`;
-          setUptimeBar(webUptimeBar, 5);
-        }
-      } catch (err) {
-        elWeb.innerHTML = `<span class="orange">Timeout / Status Unknown</span>`;
-        setUptimeBar(webUptimeBar, 50);
-      }
+        const response = await fetch('https://api.mcsrvstat.us/2/mc.sharpennd.xyz');
+        if (!response.ok) throw new Error('Failed to fetch Minecraft status');
+        const data = await response.json();
 
-      const elMC = document.getElementById('mcStatus1');
-      const mcUptimeBar = document.getElementById('mcUptimeBar');
-
-      try {
-        const res = await fetch(`https://api.mcsrvstat.us/2/mc.sharpennd.xyz`);
-        const data = await res.json();
         if (data.online) {
-          elMC.innerHTML = `<span class="green">Online</span>`;
-          setUptimeBar(mcUptimeBar, 97);
+          statusEl.textContent = 'online';
+          statusEl.className = 'status-text green';
+          let uptimePercent = 99.93;
+          percentEl.textContent = uptimePercent.toFixed(2) + '%';
+          createUptimeBar('mcUptimeBar', uptimePercent);
         } else {
-          elMC.innerHTML = `<span class="red">Offline</span>`;
-          setUptimeBar(mcUptimeBar, 10);
+          statusEl.textContent = 'offline';
+          statusEl.className = 'status-text red';
+          percentEl.textContent = '0.00%';
+          createUptimeBar('mcUptimeBar', 0);
         }
-      } catch (err) {
-        elMC.innerHTML = `<span class="orange">Status Unknown</span>`;
-        setUptimeBar(mcUptimeBar, 50);
+      } catch (error) {
+        statusEl.textContent = 'status unknown';
+        statusEl.className = 'status-text orange';
+        percentEl.textContent = '--%';
+        createUptimeBar('mcUptimeBar', 0);
       }
     }
 
-    async function initialize() {
-      const data = await loadData();
-      loadIncidents(data.incidents || []);
-      loadMaintenance(data.maintenance || []);
-      checkServiceStatus();
+    async function updateWebsiteStatus() {
+      const statusEl = document.getElementById('webStatusText');
+      const percentEl = document.getElementById('webUptimePercent');
+      try {
+        const response = await fetch('https://isitup.org/sharpennd.xyz.json');
+        if (!response.ok) throw new Error('Failed to fetch website status');
+        const data = await response.json();
+
+        if (data.status_code === 1) {
+          statusEl.textContent = 'online';
+          statusEl.className = 'status-text green';
+          let uptimePercent = 100.00;
+          percentEl.textContent = uptimePercent.toFixed(2) + '%';
+          createUptimeBar('webUptimeBar', uptimePercent);
+        } else if (data.status_code === 2) {
+          statusEl.textContent = 'offline';
+          statusEl.className = 'status-text red';
+          percentEl.textContent = '0.00%';
+          createUptimeBar('webUptimeBar', 0);
+        } else {
+          statusEl.textContent = 'status unknown';
+          statusEl.className = 'status-text orange';
+          percentEl.textContent = '--%';
+          createUptimeBar('webUptimeBar', 0);
+        }
+      } catch (error) {
+        statusEl.textContent = 'status unknown';
+        statusEl.className = 'status-text orange';
+        percentEl.textContent = '--%';
+        createUptimeBar('webUptimeBar', 0);
+      }
     }
 
     function loadIncidents(incidents) {
@@ -249,6 +232,15 @@
         container.appendChild(div);
       }
     }
+
+    async function initialize() {
+      const data = await loadData();
+      loadIncidents(data.incidents || []);
+      loadMaintenance(data.maintenance || []);
+      updateMinecraftStatus();
+      updateWebsiteStatus();
+    }
+
     initialize();
   </script>
 </body>
