@@ -32,7 +32,7 @@
       background-color: #1f1f1f;
       padding: 1rem;
       border-radius: 10px;
-      margin-bottom: 1rem;
+      margin-bottom: 1.5rem;
     }
 
     .service h3 {
@@ -48,6 +48,28 @@
     .green { color: darkgreen; }
     .orange { color: orange; }
     .red { color: darkred; }
+
+    .uptime-bar-container {
+      width: 100%;
+      background-color: #333;
+      border-radius: 6px;
+      overflow: hidden;
+      height: 25px;
+      margin-top: 0.5rem;
+      box-shadow: inset 0 0 5px #000;
+    }
+
+    .uptime-bar {
+      height: 100%;
+      transition: width 0.6s ease-in-out;
+    }
+
+    .uptime-percent {
+      text-align: right;
+      font-size: 0.9rem;
+      color: #ccc;
+      margin-top: 0.3rem;
+    }
 
     .incident, .maintenance {
       background-color: #1f1f1f;
@@ -78,37 +100,29 @@
     .entry-description {
       font-size: 1rem;
     }
-
-    .uptime-bar {
-      display: flex;
-      gap: 2px;
-      margin-top: 0.5rem;
-    }
-
-    .uptime-bar div {
-      flex: 1;
-      height: 8px;
-      border-radius: 2px;
-    }
-
-    .bar-green { background-color: darkgreen; }
-    .bar-red { background-color: darkred; }
-    .bar-orange { background-color: orange; }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="status-section">
       <h2>Service Status</h2>
+
       <div class="service">
         <h3>mc.sharpennd.xyz</h3>
         <div class="uptime" id="mcStatus1">Checking...</div>
-        <div class="uptime-bar" id="mcUptimeBar"></div>
+        <div class="uptime-bar-container">
+          <div class="uptime-bar" id="mcUptimeBar"></div>
+        </div>
+        <div class="uptime-percent" id="mcUptimePercent">0%</div>
       </div>
+
       <div class="service">
         <h3>Website</h3>
         <div class="uptime" id="webStatus">Checking...</div>
-        <div class="uptime-bar" id="webUptimeBar"></div>
+        <div class="uptime-bar-container">
+          <div class="uptime-bar" id="webUptimeBar"></div>
+        </div>
+        <div class="uptime-percent" id="webUptimePercent">0%</div>
       </div>
     </div>
 
@@ -123,6 +137,126 @@
     </div>
   </div>
 
-  <script src="script.js"></script>
+  <script>
+    async function loadData() {
+      try {
+        const response = await fetch('data.json');
+        if (!response.ok) throw new Error('Network response was not ok');
+        return await response.json();
+      } catch (error) {
+        console.error("Failed to load or parse data.json:", error);
+        return { incidents: [], maintenance: [] };
+      }
+    }
+
+    function fetchWithTimeout(resource, options = {}) {
+      const { timeout = 5000 } = options;
+
+      return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error("Timeout")), timeout);
+        fetch(resource, { method: 'HEAD', mode: 'no-cors' })
+          .then(response => {
+            clearTimeout(timer);
+            resolve(response);
+          })
+          .catch(err => {
+            clearTimeout(timer);
+            reject(err);
+          });
+      });
+    }
+
+    function setUptimeVisual(serviceId, percent) {
+      const bar = document.getElementById(`${serviceId}UptimeBar`);
+      const label = document.getElementById(`${serviceId}UptimePercent`);
+      percent = Math.max(0, Math.min(100, percent));
+      bar.style.width = percent + "%";
+      label.innerText = percent.toFixed(1) + "%";
+
+      if (percent >= 99) bar.style.backgroundColor = "darkgreen";
+      else if (percent >= 90) bar.style.backgroundColor = "orange";
+      else bar.style.backgroundColor = "darkred";
+    }
+
+    async function checkServiceStatus() {
+      const elWeb = document.getElementById('webStatus');
+      try {
+        await fetchWithTimeout('https://www.sharpennd.xyz', { timeout: 5000 });
+        elWeb.innerHTML = `<span class="green">Online</span>`;
+        setUptimeVisual("web", 100); // Simulated uptime
+      } catch (err) {
+        if (err.message === "Timeout") {
+          elWeb.innerHTML = `<span class="orange">Timeout / Status Unknown</span>`;
+          setUptimeVisual("web", 90); // Simulated fallback
+        } else {
+          elWeb.innerHTML = `<span class="red">Offline</span>`;
+          setUptimeVisual("web", 80); // Simulated fallback
+        }
+      }
+
+      const elMC = document.getElementById('mcStatus1');
+      try {
+        const res = await fetch(`https://api.mcsrvstat.us/2/mc.sharpennd.xyz`);
+        const data = await res.json();
+        if (data.online) {
+          elMC.innerHTML = `<span class="green">Online</span>`;
+          setUptimeVisual("mc", 97.5); // Simulated uptime
+        } else {
+          elMC.innerHTML = `<span class="red">Offline</span>`;
+          setUptimeVisual("mc", 85); // Simulated fallback
+        }
+      } catch (err) {
+        elMC.innerHTML = `<span class="orange">Status Unknown</span>`;
+        setUptimeVisual("mc", 92.3); // Simulated fallback
+      }
+    }
+
+    function loadIncidents(incidents) {
+      const container = document.getElementById("incidentContainer");
+      container.innerHTML = "";
+      if (!incidents.length) {
+        container.innerHTML = "<p>No incidents reported.</p>";
+        return;
+      }
+      for (const incident of incidents) {
+        const div = document.createElement("div");
+        div.className = "incident";
+        div.innerHTML = `
+          <div class="entry-title">${incident.title}</div>
+          <div class="entry-time">Start: ${incident.start} | End: ${incident.end}</div>
+          <div class="entry-description">${incident.description}</div>
+        `;
+        container.appendChild(div);
+      }
+    }
+
+    function loadMaintenance(maintenance) {
+      const container = document.getElementById("maintenanceContainer");
+      container.innerHTML = "";
+      if (!maintenance.length) {
+        container.innerHTML = "<p>No upcoming maintenance.</p>";
+        return;
+      }
+      for (const item of maintenance) {
+        const div = document.createElement("div");
+        div.className = "maintenance";
+        div.innerHTML = `
+          <div class="entry-title">${item.title}</div>
+          <div class="entry-time">Start: ${item.start} | End: ${item.end}</div>
+          <div class="entry-description">${item.description}</div>
+        `;
+        container.appendChild(div);
+      }
+    }
+
+    async function initialize() {
+      const data = await loadData();
+      loadIncidents(data.incidents || []);
+      loadMaintenance(data.maintenance || []);
+      checkServiceStatus();
+    }
+
+    initialize();
+  </script>
 </body>
 </html>
