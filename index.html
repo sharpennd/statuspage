@@ -54,6 +54,7 @@
       width: 6px;
       height: 20px;
       background-color: #4caf50;
+      border-radius: 3px;
     }
 
     .uptime-block.down {
@@ -134,7 +135,7 @@
     function generateUptimeBlocks(containerId, percentage, totalBlocks = 60) {
       const container = document.getElementById(containerId);
       container.innerHTML = '';
-      const upBlocks = Math.round((percentage / 100) * totalBlocks);
+      const upBlocks = Math.floor((percentage / 100) * totalBlocks);
       for (let i = 0; i < totalBlocks; i++) {
         const block = document.createElement('div');
         block.className = 'uptime-block';
