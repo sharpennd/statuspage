@@ -32,17 +32,49 @@
       background-color: #1f1f1f;
       padding: 1rem;
       border-radius: 10px;
-      margin-bottom: 1rem;
+      margin-bottom: 1.5rem;
     }
 
     .service h3 {
       margin: 0;
       font-size: 1.2rem;
+      display: inline-block;
     }
 
     .uptime {
       margin-top: 0.5rem;
       font-size: 0.95rem;
+    }
+
+    .bar-wrapper {
+      margin-top: 0.5rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 2px;
+    }
+
+    .bar {
+      width: 12px;
+      height: 28px;
+      border-radius: 3px;
+      background-color: #555;
+    }
+
+    .bar.online {
+      background-color: darkgreen;
+    }
+
+    .bar.offline {
+      background-color: darkred;
+    }
+
+    .bar.unknown {
+      background-color: orange;
+    }
+
+    .percentage {
+      float: right;
+      font-weight: bold;
     }
 
     .green { color: darkgreen; }
@@ -82,15 +114,23 @@
 </head>
 <body>
   <div class="container">
+    <h1>sharpennd Status Page</h1>
+
     <div class="status-section">
       <h2>Service Status</h2>
+
       <div class="service">
         <h3>mc.sharpennd.xyz</h3>
+        <span class="percentage" id="mcUptimePercent">Loading...</span>
         <div class="uptime" id="mcStatus1">Checking...</div>
+        <div class="bar-wrapper" id="mcUptimeBar"></div>
       </div>
+
       <div class="service">
         <h3>Website</h3>
+        <span class="percentage" id="webUptimePercent">Loading...</span>
         <div class="uptime" id="webStatus">Checking...</div>
+        <div class="bar-wrapper" id="webUptimeBar"></div>
       </div>
     </div>
 
@@ -121,9 +161,7 @@
       const { timeout = 5000 } = options;
 
       return new Promise((resolve, reject) => {
-        const timer = setTimeout(() => {
-          reject(new Error("Timeout"));
-        }, timeout);
+        const timer = setTimeout(() => reject(new Error("Timeout")), timeout);
 
         fetch(resource, { method: 'HEAD', mode: 'no-cors' })
           .then(response => {
@@ -143,32 +181,59 @@
         await fetchWithTimeout('https://www.sharpennd.xyz', { timeout: 5000 });
         elWeb.innerHTML = `<span class="green">Online</span>`;
       } catch (err) {
-        if (err.message === "Timeout") {
-          elWeb.innerHTML = `<span class="orange">Timeout / Status Unknown</span>`;
-        } else {
-          elWeb.innerHTML = `<span class="red">Offline</span>`;
-        }
+        elWeb.innerHTML = err.message === "Timeout"
+          ? `<span class="orange">Timeout / Status Unknown</span>`
+          : `<span class="red">Offline</span>`;
       }
 
       const elMC = document.getElementById('mcStatus1');
       try {
         const res = await fetch(`https://api.mcsrvstat.us/2/mc.sharpennd.xyz`);
         const data = await res.json();
-        if (data.online) {
-          elMC.innerHTML = `<span class="green">Online</span>`;
-        } else {
-          elMC.innerHTML = `<span class="red">Offline</span>`;
-        }
+        elMC.innerHTML = data.online
+          ? `<span class="green">Online</span>`
+          : `<span class="red">Offline</span>`;
       } catch (err) {
         elMC.innerHTML = `<span class="orange">Status Unknown</span>`;
       }
     }
 
-    async function initialize() {
-      const data = await loadData();
-      loadIncidents(data.incidents || []);
-      loadMaintenance(data.maintenance || []);
-      checkServiceStatus();
+    function generateHistoryFromIncidents(incidents, totalDays = 60) {
+      const history = Array(totalDays).fill("online");
+      const today = new Date();
+      const msPerDay = 86400000;
+
+      for (const incident of incidents) {
+        const start = new Date(incident.start);
+        const end = incident.end ? new Date(incident.end) : new Date();
+
+        for (let i = 0; i < totalDays; i++) {
+          const day = new Date(today - (totalDays - 1 - i) * msPerDay);
+          if (day >= start && day <= end) {
+            history[i] = "offline";
+          }
+        }
+      }
+
+      return history;
+    }
+
+    function renderUptimeBar(barId, labelId, history) {
+      const bar = document.getElementById(barId);
+      const label = document.getElementById(labelId);
+      bar.innerHTML = "";
+
+      const total = history.length;
+      const up = history.filter(x => x === "online").length;
+      const percent = ((up / total) * 100).toFixed(2);
+
+      label.textContent = `${percent}%`;
+
+      for (const status of history) {
+        const div = document.createElement("div");
+        div.className = `bar ${status}`;
+        bar.appendChild(div);
+      }
     }
 
     function loadIncidents(incidents) {
@@ -208,6 +273,20 @@
         container.appendChild(div);
       }
     }
+
+    async function initialize() {
+      const data = await loadData();
+      loadIncidents(data.incidents || []);
+      loadMaintenance(data.maintenance || []);
+      checkServiceStatus();
+
+      const mcHistory = data.uptime?.mc || generateHistoryFromIncidents(data.incidents || []);
+      const webHistory = data.uptime?.web || generateHistoryFromIncidents(data.incidents || []);
+
+      renderUptimeBar("mcUptimeBar", "mcUptimePercent", mcHistory);
+      renderUptimeBar("webUptimeBar", "webUptimePercent", webHistory);
+    }
+
     initialize();
   </script>
 </body>
