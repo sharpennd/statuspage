@@ -32,7 +32,7 @@
       background-color: #1f1f1f;
       padding: 1rem;
       border-radius: 10px;
-      margin-bottom: 1.5rem;
+      margin-bottom: 1rem;
     }
 
     .service h3 {
@@ -40,35 +40,26 @@
       font-size: 1.2rem;
     }
 
-    .uptime {
-      margin-top: 0.5rem;
-      font-size: 0.95rem;
-    }
-
-    .green { color: darkgreen; }
-    .orange { color: orange; }
-    .red { color: darkred; }
-
     .uptime-bar-container {
       width: 100%;
-      background-color: #333;
-      border-radius: 6px;
+      height: 28px;
+      background-color: #2c2c2c;
+      border-radius: 14px;
       overflow: hidden;
-      height: 25px;
-      margin-top: 0.5rem;
-      box-shadow: inset 0 0 5px #000;
+      position: relative;
+      margin-top: 0.6rem;
     }
 
     .uptime-bar {
       height: 100%;
-      transition: width 0.6s ease-in-out;
-    }
-
-    .uptime-percent {
+      transition: width 0.5s ease-in-out;
+      border-radius: 14px;
       text-align: right;
-      font-size: 0.9rem;
-      color: #ccc;
-      margin-top: 0.3rem;
+      padding-right: 10px;
+      line-height: 28px;
+      color: white;
+      font-weight: bold;
+      font-size: 0.85rem;
     }
 
     .incident, .maintenance {
@@ -104,25 +95,25 @@
 </head>
 <body>
   <div class="container">
+    <h1>sharpennd - Status Page</h1>
+
     <div class="status-section">
       <h2>Service Status</h2>
 
       <div class="service">
         <h3>mc.sharpennd.xyz</h3>
-        <div class="uptime" id="mcStatus1">Checking...</div>
         <div class="uptime-bar-container">
-          <div class="uptime-bar" id="mcUptimeBar"></div>
+          <div class="uptime-bar" id="mcUptimeBar">0%</div>
         </div>
-        <div class="uptime-percent" id="mcUptimePercent">0%</div>
+        <div class="uptime" id="mcStatus1">Checking...</div>
       </div>
 
       <div class="service">
         <h3>Website</h3>
-        <div class="uptime" id="webStatus">Checking...</div>
         <div class="uptime-bar-container">
-          <div class="uptime-bar" id="webUptimeBar"></div>
+          <div class="uptime-bar" id="webUptimeBar">0%</div>
         </div>
-        <div class="uptime-percent" id="webUptimePercent">0%</div>
+        <div class="uptime" id="webStatus">Checking...</div>
       </div>
     </div>
 
@@ -153,7 +144,10 @@
       const { timeout = 5000 } = options;
 
       return new Promise((resolve, reject) => {
-        const timer = setTimeout(() => reject(new Error("Timeout")), timeout);
+        const timer = setTimeout(() => {
+          reject(new Error("Timeout"));
+        }, timeout);
+
         fetch(resource, { method: 'HEAD', mode: 'no-cors' })
           .then(response => {
             clearTimeout(timer);
@@ -166,32 +160,15 @@
       });
     }
 
-    function setUptimeVisual(serviceId, percent) {
-      const bar = document.getElementById(`${serviceId}UptimeBar`);
-      const label = document.getElementById(`${serviceId}UptimePercent`);
-      percent = Math.max(0, Math.min(100, percent));
-      bar.style.width = percent + "%";
-      label.innerText = percent.toFixed(1) + "%";
-
-      if (percent >= 99) bar.style.backgroundColor = "darkgreen";
-      else if (percent >= 90) bar.style.backgroundColor = "orange";
-      else bar.style.backgroundColor = "darkred";
-    }
-
     async function checkServiceStatus() {
       const elWeb = document.getElementById('webStatus');
       try {
         await fetchWithTimeout('https://www.sharpennd.xyz', { timeout: 5000 });
-        elWeb.innerHTML = `<span class="green">Online</span>`;
-        setUptimeVisual("web", 100); // Simulated uptime
+        elWeb.innerHTML = `<span style="color: darkgreen">Online</span>`;
+        setUptimeVisual("web", 100);
       } catch (err) {
-        if (err.message === "Timeout") {
-          elWeb.innerHTML = `<span class="orange">Timeout / Status Unknown</span>`;
-          setUptimeVisual("web", 90); // Simulated fallback
-        } else {
-          elWeb.innerHTML = `<span class="red">Offline</span>`;
-          setUptimeVisual("web", 80); // Simulated fallback
-        }
+        elWeb.innerHTML = `<span style="color: darkred">Offline</span>`;
+        setUptimeVisual("web", 0);
       }
 
       const elMC = document.getElementById('mcStatus1');
@@ -199,15 +176,28 @@
         const res = await fetch(`https://api.mcsrvstat.us/2/mc.sharpennd.xyz`);
         const data = await res.json();
         if (data.online) {
-          elMC.innerHTML = `<span class="green">Online</span>`;
-          setUptimeVisual("mc", 97.5); // Simulated uptime
+          elMC.innerHTML = `<span style="color: darkgreen">Online</span>`;
+          setUptimeVisual("mc", 100);
         } else {
-          elMC.innerHTML = `<span class="red">Offline</span>`;
-          setUptimeVisual("mc", 85); // Simulated fallback
+          elMC.innerHTML = `<span style="color: darkred">Offline</span>`;
+          setUptimeVisual("mc", 0);
         }
       } catch (err) {
-        elMC.innerHTML = `<span class="orange">Status Unknown</span>`;
-        setUptimeVisual("mc", 92.3); // Simulated fallback
+        elMC.innerHTML = `<span style="color: darkred">Status Unknown</span>`;
+        setUptimeVisual("mc", 0);
+      }
+    }
+
+    function setUptimeVisual(serviceId, percent) {
+      const bar = document.getElementById(`${serviceId}UptimeBar`);
+      percent = Math.max(0, Math.min(100, percent));
+      bar.style.width = percent + "%";
+      bar.innerText = percent.toFixed(1) + "%";
+
+      if (percent >= 99) {
+        bar.style.backgroundColor = "darkgreen";
+      } else {
+        bar.style.backgroundColor = "darkred";
       }
     }
 
