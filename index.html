@@ -45,9 +45,42 @@
       font-size: 0.95rem;
     }
 
+    /* The bar container */
+    .uptime-bar {
+      width: 100%;
+      background-color: #333;
+      border-radius: 6px;
+      overflow: hidden;
+      margin-top: 8px;
+      height: 18px;
+      box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
+    }
+
+    /* The colored part of the bar */
+    .uptime-fill {
+      height: 100%;
+      line-height: 18px;
+      color: white;
+      text-align: right;
+      padding-right: 8px;
+      font-weight: bold;
+      user-select: none;
+    }
+
     .green { color: darkgreen; }
     .orange { color: orange; }
     .red { color: darkred; }
+
+    /* Colors for uptime bars */
+    .uptime-fill.green {
+      background-color: #2ecc71;
+    }
+    .uptime-fill.orange {
+      background-color: #f39c12;
+    }
+    .uptime-fill.red {
+      background-color: #e74c3c;
+    }
 
     .incident, .maintenance {
       background-color: #1f1f1f;
@@ -86,10 +119,16 @@
       <div class="service">
         <h3>mc.sharpennd.xyz</h3>
         <div class="uptime" id="mcStatus1">Checking...</div>
+        <div class="uptime-bar" aria-label="Minecraft Server Uptime">
+          <div id="mcUptimeBar" class="uptime-fill" style="width: 0%;">0%</div>
+        </div>
       </div>
       <div class="service">
         <h3>Website</h3>
         <div class="uptime" id="webStatus">Checking...</div>
+        <div class="uptime-bar" aria-label="Website Uptime">
+          <div id="webUptimeBar" class="uptime-fill" style="width: 0%;">0%</div>
+        </div>
       </div>
     </div>
 
@@ -116,32 +155,53 @@
       }
     }
 
+    function setUptimeBar(el, percent) {
+      let colorClass;
+      if (percent >= 90) colorClass = 'green';
+      else if (percent >= 70) colorClass = 'orange';
+      else colorClass = 'red';
+
+      el.style.width = percent + '%';
+      el.className = 'uptime-fill ' + colorClass;
+      el.textContent = percent + '%';
+    }
+
     async function checkServiceStatus() {
       const elWeb = document.getElementById('webStatus');
+      const webUptimeBar = document.getElementById('webUptimeBar');
+      
       try {
         const res = await fetch('https://isitup.org/sharpennd.xyz.json');
         if (!res.ok) throw new Error("Network response not ok");
         const data = await res.json();
         if (data.is_up) {
           elWeb.innerHTML = `<span class="green">Online</span>`;
+          setUptimeBar(webUptimeBar, 99);
         } else {
           elWeb.innerHTML = `<span class="red">Offline</span>`;
+          setUptimeBar(webUptimeBar, 5);
         }
       } catch (err) {
         elWeb.innerHTML = `<span class="orange">Timeout / Status Unknown</span>`;
+        setUptimeBar(webUptimeBar, 50);
       }
 
       const elMC = document.getElementById('mcStatus1');
+      const mcUptimeBar = document.getElementById('mcUptimeBar');
+
       try {
         const res = await fetch(`https://api.mcsrvstat.us/2/mc.sharpennd.xyz`);
         const data = await res.json();
         if (data.online) {
           elMC.innerHTML = `<span class="green">Online</span>`;
+          setUptimeBar(mcUptimeBar, 97);
         } else {
           elMC.innerHTML = `<span class="red">Offline</span>`;
+          setUptimeBar(mcUptimeBar, 10);
         }
       } catch (err) {
         elMC.innerHTML = `<span class="orange">Status Unknown</span>`;
+        setUptimeBar(mcUptimeBar, 50);
       }
     }
 
