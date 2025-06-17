@@ -32,48 +32,22 @@
       background-color: #1f1f1f;
       padding: 1rem;
       border-radius: 10px;
-      margin-bottom: 1.5rem;
+      margin-bottom: 1rem;
     }
 
     .service h3 {
-      margin: 0 0 0.5rem 0;
+      margin: 0;
       font-size: 1.2rem;
     }
 
-    .green-text { color: darkgreen; }
-    .red-text { color: darkred; }
-    .orange-text { color: orange; }
-
-    .status-text {
-      margin-left: 0.5rem;
-      font-weight: normal;
-      font-size: 1rem;
-    }
-
-    .uptime-bar {
-      display: flex;
-      gap: 2px;
-      flex-wrap: wrap;
+    .uptime {
       margin-top: 0.5rem;
+      font-size: 0.95rem;
     }
 
-    .uptime-block {
-      width: 6px;
-      height: 20px;
-      background-color: #4caf50;
-      border-radius: 3px;
-    }
-
-    .uptime-block.down {
-      background-color: #f44336;
-    }
-
-    .uptime-percent {
-      text-align: right;
-      font-size: 0.9rem;
-      color: #ccc;
-      margin-top: 0.3rem;
-    }
+    .green { color: darkgreen; }
+    .orange { color: orange; }
+    .red { color: darkred; }
 
     .incident, .maintenance {
       background-color: #1f1f1f;
@@ -81,6 +55,12 @@
       margin: 1rem 0;
       border-radius: 10px;
       box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .incident:hover, .maintenance:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.6);
     }
 
     .entry-title {
@@ -104,15 +84,12 @@
   <div class="container">
     <div class="status-section">
       <div class="service">
-        <h3>Minecraft Server <span class="status-text" id="mcStatusText"></span></h3>
-        <div id="mcUptimeBar" class="uptime-bar"></div>
-        <div class="uptime-percent" id="mcUptimePercent">100%</div>
+        <h3>mc.sharpennd.xyz</h3>
+        <div class="uptime" id="mcStatus1">Checking...</div>
       </div>
-
       <div class="service">
-        <h3>Website <span class="status-text" id="webStatusText"></span></h3>
-        <div id="webUptimeBar" class="uptime-bar"></div>
-        <div class="uptime-percent" id="webUptimePercent">100%</div>
+        <h3>Website</h3>
+        <div class="uptime" id="webStatus">Checking...</div>
       </div>
     </div>
 
@@ -128,63 +105,6 @@
   </div>
 
   <script>
-    const mcHost = 'mc.sharpennd.xyz';
-    const websiteURL = 'https://sharpennd.xyz/favicon.ico';
-
-    async function fetchMinecraftStatus() {
-      try {
-        const res = await fetch(`https://api.mcstatus.io/v2/status/java/${mcHost}`);
-        if (!res.ok) throw new Error("Failed to fetch");
-        const data = await res.json();
-        return data.online ? "online" : "offline";
-      } catch (err) {
-        return "timeout";
-      }
-    }
-
-    async function fetchWebsiteStatus() {
-      try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 5000);
-        const res = await fetch(websiteURL, {
-          method: "GET",
-          mode: "no-cors",
-          signal: controller.signal
-        });
-        clearTimeout(timeout);
-        return "online";
-      } catch (err) {
-        return "timeout";
-      }
-    }
-
-    function setServiceStatusText(serviceId, status) {
-      const el = document.getElementById(`${serviceId}StatusText`);
-      if (!el) return;
-
-      let text = '';
-      let colorClass = '';
-
-      switch (status) {
-        case 'online':
-          text = 'Online';
-          colorClass = 'green-text';
-          break;
-        case 'offline':
-          text = 'Offline';
-          colorClass = 'red-text';
-          break;
-        case 'timeout':
-        default:
-          text = 'Timeout';
-          colorClass = 'orange-text';
-          break;
-      }
-
-      el.textContent = text;
-      el.className = 'status-text ' + colorClass;
-    }
-
     async function loadData() {
       try {
         const response = await fetch('data.json');
@@ -196,22 +116,40 @@
       }
     }
 
-    function generateUptimeBlocks(containerId, percentage, totalBlocks = 60) {
-      const container = document.getElementById(containerId);
-      container.innerHTML = '';
-      const upBlocks = Math.floor((percentage / 100) * totalBlocks);
-      for (let i = 0; i < totalBlocks; i++) {
-        const block = document.createElement('div');
-        block.className = 'uptime-block';
-        if (i >= upBlocks) block.classList.add('down');
-        container.appendChild(block);
+    async function checkServiceStatus() {
+      const elWeb = document.getElementById('webStatus');
+      try {
+        const res = await fetch('https://isitup.org/sharpennd.xyz.json');
+        if (!res.ok) throw new Error("Network response not ok");
+        const data = await res.json();
+        if (data.is_up) {
+          elWeb.innerHTML = `<span class="green">Online</span>`;
+        } else {
+          elWeb.innerHTML = `<span class="red">Offline</span>`;
+        }
+      } catch (err) {
+        elWeb.innerHTML = `<span class="orange">Timeout / Status Unknown</span>`;
+      }
+
+      const elMC = document.getElementById('mcStatus1');
+      try {
+        const res = await fetch(`https://api.mcsrvstat.us/2/mc.sharpennd.xyz`);
+        const data = await res.json();
+        if (data.online) {
+          elMC.innerHTML = `<span class="green">Online</span>`;
+        } else {
+          elMC.innerHTML = `<span class="red">Offline</span>`;
+        }
+      } catch (err) {
+        elMC.innerHTML = `<span class="orange">Status Unknown</span>`;
       }
     }
 
-    function setUptimeDisplay(serviceId, percentage) {
-      const percentEl = document.getElementById(`${serviceId}UptimePercent`);
-      generateUptimeBlocks(`${serviceId}UptimeBar`, percentage);
-      percentEl.textContent = `${percentage.toFixed(2)}%`;
+    async function initialize() {
+      const data = await loadData();
+      loadIncidents(data.incidents || []);
+      loadMaintenance(data.maintenance || []);
+      checkServiceStatus();
     }
 
     function loadIncidents(incidents) {
@@ -251,24 +189,6 @@
         container.appendChild(div);
       }
     }
-
-    async function initialize() {
-      const [mcStatus, webStatus, data] = await Promise.all([
-        fetchMinecraftStatus(),
-        fetchWebsiteStatus(),
-        loadData()
-      ]);
-
-      setServiceStatusText("mc", mcStatus);
-      setServiceStatusText("web", webStatus);
-
-      setUptimeDisplay("mc", 99.93);
-      setUptimeDisplay("web", 100);
-
-      loadIncidents(data.incidents || []);
-      loadMaintenance(data.maintenance || []);
-    }
-
     initialize();
   </script>
 </body>
