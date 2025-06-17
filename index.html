@@ -40,8 +40,15 @@
       font-size: 1.2rem;
     }
 
-    .green { color: darkgreen; }
-    .red { color: darkred; }
+    .green-text { color: darkgreen; }
+    .red-text { color: darkred; }
+    .orange-text { color: orange; }
+
+    .status-text {
+      margin-left: 0.5rem;
+      font-weight: normal;
+      font-size: 1rem;
+    }
 
     .uptime-bar {
       display: flex;
@@ -97,13 +104,13 @@
   <div class="container">
     <div class="status-section">
       <div class="service">
-        <h3>Minecraft Server</h3>
+        <h3>Minecraft Server <span class="status-text" id="mcStatusText"></span></h3>
         <div id="mcUptimeBar" class="uptime-bar"></div>
         <div class="uptime-percent" id="mcUptimePercent">100%</div>
       </div>
 
       <div class="service">
-        <h3>Website</h3>
+        <h3>Website <span class="status-text" id="webStatusText"></span></h3>
         <div id="webUptimeBar" class="uptime-bar"></div>
         <div class="uptime-percent" id="webUptimePercent">100%</div>
       </div>
@@ -121,6 +128,63 @@
   </div>
 
   <script>
+    const mcHost = 'mc.sharpennd.xyz';
+    const websiteURL = 'https://sharpennd.xyz/';
+
+    async function fetchMinecraftStatus() {
+      try {
+        const res = await fetch(`https://api.mcstatus.io/v2/status/java/${mcHost}`);
+        if (!res.ok) throw new Error("Failed to fetch");
+        const data = await res.json();
+        return data.online ? "online" : "offline";
+      } catch (err) {
+        return "timeout";
+      }
+    }
+
+    async function fetchWebsiteStatus() {
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 5000);
+        const res = await fetch(websiteURL, {
+          method: "HEAD",
+          mode: "no-cors",
+          signal: controller.signal,
+        });
+        clearTimeout(timeout);
+        return "online";
+      } catch (err) {
+        return "timeout";
+      }
+    }
+
+    function setServiceStatusText(serviceId, status) {
+      const el = document.getElementById(`${serviceId}StatusText`);
+      if (!el) return;
+
+      let text = '';
+      let colorClass = '';
+
+      switch (status) {
+        case 'online':
+          text = '— Online';
+          colorClass = 'green-text';
+          break;
+        case 'offline':
+          text = '— Offline';
+          colorClass = 'red-text';
+          break;
+        case 'timeout':
+        default:
+          text = '— Timeout';
+          colorClass = 'orange-text';
+          break;
+      }
+
+      el.textContent = text;
+      el.className = 'status-text ' + colorClass;
+    }
+
     async function loadData() {
       try {
         const response = await fetch('data.json');
@@ -189,13 +253,22 @@
     }
 
     async function initialize() {
-      const data = await loadData();
+      const [mcStatus, webStatus, data] = await Promise.all([
+        fetchMinecraftStatus(),
+        fetchWebsiteStatus(),
+        loadData()
+      ]);
+
+      setServiceStatusText("mc", mcStatus);
+      setServiceStatusText("web", webStatus);
+
       setUptimeDisplay("mc", 99.93);
       setUptimeDisplay("web", 100);
+
       loadIncidents(data.incidents || []);
       loadMaintenance(data.maintenance || []);
     }
-    
+
     initialize();
   </script>
 </body>
