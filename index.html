@@ -129,7 +129,7 @@
 
   <script>
     const mcHost = 'mc.sharpennd.xyz';
-    const websiteURL = 'https://sharpennd.xyz/';
+    const websiteURL = 'https://sharpennd.xyz/favicon.ico';
 
     async function fetchMinecraftStatus() {
       try {
@@ -147,9 +147,9 @@
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 5000);
         const res = await fetch(websiteURL, {
-          method: "HEAD",
+          method: "GET",
           mode: "no-cors",
-          signal: controller.signal,
+          signal: controller.signal
         });
         clearTimeout(timeout);
         return "online";
@@ -167,16 +167,16 @@
 
       switch (status) {
         case 'online':
-          text = '— Online';
+          text = 'Online';
           colorClass = 'green-text';
           break;
         case 'offline':
-          text = '— Offline';
+          text = 'Offline';
           colorClass = 'red-text';
           break;
         case 'timeout':
         default:
-          text = '— Timeout';
+          text = 'Timeout';
           colorClass = 'orange-text';
           break;
       }
