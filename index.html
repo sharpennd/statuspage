@@ -9,8 +9,8 @@
       margin: 0;
       padding: 0;
       font-family: "Segoe UI", sans-serif;
-      background-color: #1e1e1e;
-      color: #fff;
+      background-color: #121212;
+      color: #e0e0e0;
     }
 
     .container {
@@ -29,103 +29,82 @@
     }
 
     .service {
-      background-color: #2c2c2c;
+      background-color: #1f1f1f;
       padding: 1rem;
       border-radius: 10px;
-      margin-bottom: 2rem;
+      margin-bottom: 1.5rem;
     }
 
     .service h3 {
-      margin: 0;
+      margin: 0 0 0.5rem 0;
       font-size: 1.2rem;
-      display: flex;
-      justify-content: space-between;
-    }
-
-    .uptime-bar {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 4px;
-      margin-top: 0.8rem;
-      margin-bottom: 0.4rem;
-    }
-
-    .bar-segment {
-      width: 16px;
-      height: 32px;
-      background-color: green;
-      border-radius: 0;
-    }
-
-    .bar-segment.down {
-      background-color: darkred;
-    }
-
-    .uptime-footer {
-      display: flex;
-      justify-content: space-between;
-      font-size: 0.85rem;
-      color: #bbb;
     }
 
     .green { color: darkgreen; }
     .red { color: darkred; }
 
-    .incident {
-      background-color: #2c2c2c;
-      border: 1px solid darkred;
-      padding: 1rem;
-      margin-bottom: 1rem;
+    .uptime-bar {
+      display: flex;
+      gap: 2px;
+      flex-wrap: wrap;
+      margin-top: 0.5rem;
     }
 
-    .incident-title {
+    .uptime-block {
+      width: 6px;
+      height: 20px;
+      background-color: #4caf50;
+    }
+
+    .uptime-block.down {
+      background-color: #f44336;
+    }
+
+    .uptime-percent {
+      text-align: right;
+      font-size: 0.9rem;
+      color: #ccc;
+      margin-top: 0.3rem;
+    }
+
+    .incident, .maintenance {
+      background-color: #1f1f1f;
+      padding: 1rem;
+      margin: 1rem 0;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+    }
+
+    .entry-title {
+      font-size: 1.2rem;
       font-weight: bold;
-      font-size: 1.1rem;
+      margin-bottom: 0.5rem;
     }
 
     .entry-time {
-      font-size: 0.85rem;
-      color: #aaa;
-      margin: 0.3rem 0;
+      font-size: 0.9rem;
+      color: #bbb;
+      margin-bottom: 0.5rem;
     }
 
     .entry-description {
-      font-size: 0.95rem;
-    }
-
-    .maintenance {
-      background-color: #2c2c2c;
-      padding: 1rem;
-      margin-bottom: 1rem;
-      border-radius: 10px;
+      font-size: 1rem;
     }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="status-section">
-      <div class="service" id="panel">
-        <h3>
-          mc.sharpennd.xyz <span class="status-text green">online</span>
-        </h3>
-        <div class="uptime-bar" id="panelBar"></div>
-        <div class="uptime-footer">
-          <span>60 DAYS AGO</span>
-          <span id="panelPercent">--%</span>
-          <span>TODAY</span>
-        </div>
+      <div class="service">
+        <h3>Minecraft Server</h3>
+        <div id="mcUptimeBar" class="uptime-bar"></div>
+        <div class="uptime-percent" id="mcUptimePercent">100%</div>
       </div>
 
-      <div class="service" id="website">
-        <h3>
-          Website <span class="status-text green">online</span>
-        </h3>
-        <div class="uptime-bar" id="webBar"></div>
-        <div class="uptime-footer">
-          <span>60 DAYS AGO</span>
-          <span id="webPercent">--%</span>
-          <span>TODAY</span>
-        </div>
+      <div class="service">
+        <h3>Website</h3>
+        <div id="webUptimeBar" class="uptime-bar"></div>
+        <div class="uptime-percent" id="webUptimePercent">100%</div>
       </div>
     </div>
 
@@ -136,75 +115,73 @@
 
     <div class="status-section">
       <h2>Maintenance</h2>
-      <div id="maintenanceContainer">No upcoming maintenance</div>
+      <div id="maintenanceContainer">Loading maintenance...</div>
     </div>
   </div>
 
   <script>
     async function loadData() {
-      const res = await fetch('data.json');
-      return await res.json();
-    }
-
-    function generateUptimeSegments(incidents, totalDays = 60) {
-      const segments = [];
-      const downDays = new Set();
-
-      incidents.forEach(incident => {
-        const start = new Date(incident.start);
-        const end = new Date(incident.end);
-        const now = new Date();
-
-        for (let d = 0; d < totalDays; d++) {
-          const day = new Date();
-          day.setDate(now.getDate() - (totalDays - d));
-          if (day >= start && day <= end) {
-            downDays.add(d);
-          }
-        }
-      });
-
-      for (let i = 0; i < totalDays; i++) {
-        segments.push(downDays.has(i) ? 'down' : 'up');
+      try {
+        const response = await fetch('data.json');
+        if (!response.ok) throw new Error('Network response was not ok');
+        return await response.json();
+      } catch (error) {
+        console.error("Failed to load or parse data.json:", error);
+        return { incidents: [], maintenance: [] };
       }
-
-      return segments;
     }
 
-    function renderBar(containerId, segments) {
-      const bar = document.getElementById(containerId);
-      bar.innerHTML = '';
-      let uptimeCount = 0;
-      segments.forEach(state => {
-        const div = document.createElement('div');
-        div.className = 'bar-segment';
-        if (state === 'down') {
-          div.classList.add('down');
-        } else {
-          uptimeCount++;
-        }
-        bar.appendChild(div);
-      });
-
-      const percent = ((uptimeCount / segments.length) * 100).toFixed(2);
-      document.getElementById(containerId.replace('Bar', 'Percent')).textContent = `${percent}%`;
-    }
-
-    function renderIncidents(incidents) {
-      const container = document.getElementById("incidentContainer");
+    function generateUptimeBlocks(containerId, percentage, totalBlocks = 60) {
+      const container = document.getElementById(containerId);
       container.innerHTML = '';
+      const upBlocks = Math.round((percentage / 100) * totalBlocks);
+      for (let i = 0; i < totalBlocks; i++) {
+        const block = document.createElement('div');
+        block.className = 'uptime-block';
+        if (i >= upBlocks) block.classList.add('down');
+        container.appendChild(block);
+      }
+    }
+
+    function setUptimeDisplay(serviceId, percentage) {
+      const percentEl = document.getElementById(`${serviceId}UptimePercent`);
+      generateUptimeBlocks(`${serviceId}UptimeBar`, percentage);
+      percentEl.textContent = `${percentage.toFixed(2)}%`;
+    }
+
+    function loadIncidents(incidents) {
+      const container = document.getElementById("incidentContainer");
+      container.innerHTML = "";
       if (!incidents.length) {
-        container.textContent = "No incidents reported.";
+        container.innerHTML = "<p>No incidents reported.</p>";
         return;
       }
-
-      for (const i of incidents) {
-        const div = document.createElement('div');
-        div.className = 'incident';
+      for (const incident of incidents) {
+        const div = document.createElement("div");
+        div.className = "incident";
         div.innerHTML = `
-          <div class="incident-title">${i.title}</div>
-          <div class="entry-time">Start: ${i.start} | End: ${i.end}</div>
-          <div class="entry-description">${i.description}</div>
+          <div class="entry-title">${incident.title}</div>
+          <div class="entry-time">Start: ${incident.start} | End: ${incident.end}</div>
+          <div class="entry-description">${incident.description}</div>
+        `;
+        container.appendChild(div);
+      }
+    }
+
+    function loadMaintenance(maintenance) {
+      const container = document.getElementById("maintenanceContainer");
+      container.innerHTML = "";
+      if (!maintenance.length) {
+        container.innerHTML = "<p>No upcoming maintenance.</p>";
+        return;
+      }
+      for (const item of maintenance) {
+        const div = document.createElement("div");
+        div.className = "maintenance";
+        div.innerHTML = `
+          <div class="entry-title">${item.title}</div>
+          <div class="entry-time">Start: ${item.start} | End: ${item.end}</div>
+          <div class="entry-description">${item.description}</div>
         `;
         container.appendChild(div);
       }
@@ -212,14 +189,12 @@
 
     async function initialize() {
       const data = await loadData();
-      const panelSegments = generateUptimeSegments(data.incidents);
-      const webSegments = generateUptimeSegments([]);
-
-      renderBar('panelBar', panelSegments);
-      renderBar('webBar', webSegments);
-      renderIncidents(data.incidents);
+      setUptimeDisplay("mc", 99.93);
+      setUptimeDisplay("web", 100);
+      loadIncidents(data.incidents || []);
+      loadMaintenance(data.maintenance || []);
     }
-
+    
     initialize();
   </script>
 </body>
